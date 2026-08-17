@@ -2,7 +2,7 @@
   "$schema": "https://dl.viam.dev/module.schema.json",
   "module_id": "dtcurrie:walkie",
   "visibility": "public",
-  "url": "https://github.com/DTCurrie/viam-walkie",
+  "url": "https://github.com/DTCurrie/walkie",
   "description": "A channel-based audio network: any number of machines join named channels, and a member's microphone reaches every speaker tuned to the same channel, with push-to-talk floor control and runtime channel changes",
   "models": [
     {
