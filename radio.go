@@ -18,8 +18,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/DTCurrie/viam-comms/audio/pcm"
+	"github.com/DTCurrie/viam-comms/audio/pump"
 	"walkie/internal/bus"
-	"walkie/internal/pump"
 )
 
 // Radio is the model triple for a member's radio.

@@ -3,7 +3,7 @@ module walkie
 go 1.25.10
 
 require (
-	github.com/DTCurrie/viam-comms v0.2.0
+	github.com/DTCurrie/viam-comms v0.3.0
 	go.viam.com/rdk v1.2.0
 	go.viam.com/test v1.2.4
 	go.viam.com/utils v0.10.2
