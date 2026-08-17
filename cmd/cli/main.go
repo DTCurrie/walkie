@@ -11,22 +11,20 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"go.viam.com/rdk/components/audioin"
 	"go.viam.com/rdk/components/audioout"
 	"go.viam.com/rdk/components/generic"
-	"go.viam.com/rdk/logging"
 	"go.viam.com/rdk/robot/client"
 	rutils "go.viam.com/rdk/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/DTCurrie/viam-comms/audio/pcm"
+	"github.com/DTCurrie/viam-comms/viamcli"
 	"walkie/internal/bus"
 )
 
@@ -102,58 +100,6 @@ Run a subcommand with -h for its flags.
 `)
 }
 
-// conn holds the flags every subcommand needs to reach a machine.
-type conn struct {
-	addr     string
-	apiKey   string
-	apiKeyID string
-}
-
-// bind deliberately does NOT default these from the environment:
-// flag.PrintDefaults would print the key verbatim in -h output, which is what
-// gets pasted into bug reports. dial reads the environment.
-func (c *conn) bind(fs *flag.FlagSet) {
-	fs.StringVar(&c.addr, "addr", "localhost:8080", "machine address, host:port or a .viam.cloud address")
-	fs.StringVar(&c.apiKey, "api-key", "", "API key payload for cloud machines; defaults to $VIAM_API_KEY")
-	fs.StringVar(&c.apiKeyID, "api-key-id", "", "API key id for cloud machines; defaults to $VIAM_API_KEY_ID")
-}
-
-func (c *conn) dial(ctx context.Context, logger logging.Logger) (*client.RobotClient, error) {
-	if c.apiKey == "" {
-		c.apiKey = os.Getenv("VIAM_API_KEY")
-	}
-	if c.apiKeyID == "" {
-		c.apiKeyID = os.Getenv("VIAM_API_KEY_ID")
-	}
-
-	var opts []client.DialOption
-	if c.apiKey != "" && c.apiKeyID != "" {
-		opts = append(opts, client.WithEntityCredentials(c.apiKeyID, client.Credentials{
-			Type:    client.CredentialsTypeAPIKey,
-			Payload: c.apiKey,
-		}))
-	} else {
-		// A local viam-server started from a config file with no auth block.
-		opts = append(opts, client.WithInsecure())
-	}
-	machine, err := client.New(ctx, c.addr, logger, client.WithDialOptions(opts...))
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to %s: %w", c.addr, err)
-	}
-	return machine, nil
-}
-
-// signalContext cancels on the first Ctrl-C so streams unwind cleanly.
-func signalContext() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-}
-
-func newLogger() logging.Logger {
-	logger := logging.NewLogger("walkie-cli")
-	logger.SetLevel(logging.WARN)
-	return logger
-}
-
 // identityFlags are the channel and member every hub call needs.
 type identityFlags struct {
 	channel string
@@ -175,16 +121,16 @@ func (i *identityFlags) extra() (map[string]interface{}, error) {
 
 func cmdResources(args []string) error {
 	fs := flag.NewFlagSet("resources", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	ctx, cancel := signalContext()
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -208,17 +154,17 @@ func cmdResources(args []string) error {
 
 func cmdChannels(args []string) error {
 	fs := flag.NewFlagSet("channels", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	name := fs.String("name", "uplink", "a walkie uplink, downlink or bus resource name")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	ctx, cancel := signalContext()
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -268,18 +214,18 @@ func doCommandOnAny(ctx context.Context, machine *client.RobotClient, name strin
 
 func cmdRoster(args []string) error {
 	fs := flag.NewFlagSet("roster", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	name := fs.String("name", "bus", "walkie bus resource name")
 	asJSON := fs.Bool("json", false, "print the raw response")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	ctx, cancel := signalContext()
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -328,10 +274,10 @@ func cmdRoster(args []string) error {
 func cmdListen(args []string) error {
 	fs := flag.NewFlagSet("listen", flag.ExitOnError)
 	var (
-		c  conn
+		c  viamcli.Conn
 		id identityFlags
 	)
-	c.bind(fs)
+	c.Bind(fs)
 	id.bind(fs, "walkie-cli-listen")
 	name := fs.String("name", "downlink", "walkie downlink resource name")
 	seconds := fs.Int("seconds", 0, "stop after this many seconds; 0 listens until Ctrl-C")
@@ -343,7 +289,7 @@ func cmdListen(args []string) error {
 		return err
 	}
 
-	ctx, cancel := signalContext()
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 	if *seconds > 0 {
 		var stop context.CancelFunc
@@ -351,7 +297,7 @@ func cmdListen(args []string) error {
 		defer stop()
 	}
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -397,7 +343,7 @@ func cmdListen(args []string) error {
 				format = fmt.Sprintf("%dHz/%dch",
 					chunk.AudioInfo.SampleRateHz, chunk.AudioInfo.NumChannels)
 			}
-			fmt.Printf("\r%s %7.1f dBFS  %s  chunks=%d  ", meter(peak), peak, format, audible)
+			fmt.Printf("\r%s %7.1f dBFS  %s  chunks=%d  ", viamcli.Meter(peak), peak, format, audible)
 		}
 	}
 	fmt.Println()
@@ -420,10 +366,10 @@ func cmdListen(args []string) error {
 func cmdTalk(args []string) error {
 	fs := flag.NewFlagSet("talk", flag.ExitOnError)
 	var (
-		c  conn
+		c  viamcli.Conn
 		id identityFlags
 	)
-	c.bind(fs)
+	c.Bind(fs)
 	id.bind(fs, "walkie-cli-talk")
 	name := fs.String("name", "uplink", "walkie uplink resource name")
 	seconds := fs.Int("seconds", 3, "how long to transmit")
@@ -443,10 +389,10 @@ func cmdTalk(args []string) error {
 		return err
 	}
 
-	ctx, cancel := signalContext()
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -549,8 +495,8 @@ func fillTone(data []byte, f pcm.Format, phase float64) float64 {
 
 func cmdTune(args []string) error {
 	fs := flag.NewFlagSet("tune", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	name := fs.String("name", "radio", "walkie radio resource name")
 	channel := fs.String("channel", "", "channel to tune to (required)")
 	if err := fs.Parse(args); err != nil {
@@ -564,8 +510,8 @@ func cmdTune(args []string) error {
 
 func cmdPTT(args []string) error {
 	fs := flag.NewFlagSet("ptt", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	name := fs.String("name", "radio", "walkie radio resource name")
 	on := fs.Bool("on", false, "open the gate")
 	off := fs.Bool("off", false, "close the gate")
@@ -596,8 +542,8 @@ func cmdPTT(args []string) error {
 
 func cmdStats(args []string) error {
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
-	var c conn
-	c.bind(fs)
+	var c viamcli.Conn
+	c.Bind(fs)
 	name := fs.String("name", "radio", "walkie radio resource name")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -605,11 +551,11 @@ func cmdStats(args []string) error {
 	return radioCommand(*name, &c, map[string]interface{}{"stats": true})
 }
 
-func radioCommand(name string, c *conn, cmd map[string]interface{}) error {
-	ctx, cancel := signalContext()
+func radioCommand(name string, c *viamcli.Conn, cmd map[string]interface{}) error {
+	ctx, cancel := viamcli.SignalContext()
 	defer cancel()
 
-	machine, err := c.dial(ctx, newLogger())
+	machine, err := c.Dial(ctx, viamcli.NewLogger("walkie-cli"))
 	if err != nil {
 		return err
 	}
@@ -633,20 +579,4 @@ func printJSON(v interface{}) error {
 	}
 	fmt.Println(string(out))
 	return nil
-}
-
-// meter renders a peak level as a coarse bar, so a glance tells you whether
-// what is arriving is speech or digital silence.
-func meter(dbfs float64) string {
-	const width = 30
-	// Map -60..0 dBFS onto the bar.
-	frac := (dbfs + 60) / 60
-	if frac < 0 {
-		frac = 0
-	}
-	if frac > 1 {
-		frac = 1
-	}
-	n := int(frac * width)
-	return "[" + strings.Repeat("#", n) + strings.Repeat(".", width-n) + "]"
 }

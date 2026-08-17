@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"flag"
 	"fmt"
 	"testing"
 
@@ -13,30 +11,6 @@ import (
 	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 )
-
-// TestHelpDoesNotLeakCredentials guards the flag defaults. flag.PrintDefaults
-// renders a non-empty string default as `(default "...")`, and -h output is what
-// users paste into bug reports.
-func TestHelpDoesNotLeakCredentials(t *testing.T) {
-	t.Setenv("VIAM_API_KEY", "sk-canary-payload")
-	t.Setenv("VIAM_API_KEY_ID", "id-canary")
-
-	var c conn
-	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	c.bind(fs)
-
-	var help bytes.Buffer
-	fs.SetOutput(&help)
-	fs.PrintDefaults()
-
-	for _, secret := range []string{"sk-canary-payload", "id-canary"} {
-		test.That(t, help.String(), test.ShouldNotContainSubstring, secret)
-	}
-
-	// The environment must still reach the dialler, just not the help text.
-	test.That(t, c.apiKey, test.ShouldBeEmpty)
-	test.That(t, c.apiKeyID, test.ShouldBeEmpty)
-}
 
 func TestIdentityFlagsRequireAChannel(t *testing.T) {
 	var id identityFlags
@@ -103,13 +77,4 @@ func TestFillToneIsContinuous(t *testing.T) {
 	// A tone must not be digital silence, or `listen` would report a fault that
 	// is really just this CLI.
 	test.That(t, pcm.PeakDBFS(data), test.ShouldBeGreaterThan, pcm.SilentDBFS)
-}
-
-// TestMeterClamps: levels outside the -60..0 window must not produce a negative
-// repeat count.
-func TestMeterClamps(t *testing.T) {
-	for _, dbfs := range []float64{-1000, pcm.SilentDBFS, -60, -30, 0, 12} {
-		test.That(t, meter(dbfs), test.ShouldHaveLength, 32) // 30 cells plus brackets
-	}
-	test.That(t, meter(-1000), test.ShouldEqual, meter(-60))
 }

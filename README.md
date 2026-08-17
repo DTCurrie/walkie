@@ -251,6 +251,29 @@ the real microphone and speaker, and a second member on the RDK's fake audio
 devices — which is enough to watch audio cross a channel before wiring up a
 second machine.
 
+### The shared library
+
+The audio plumbing — PCM math, the `GetAudio` → `PlayStream` pump, the drop-oldest
+queue, the CLI's connection flags — lives in
+[`viam-comms`](https://github.com/DTCurrie/viam-comms), pinned by tag in
+`go.mod`. Only `internal/bus` and the models are specific to this module. To
+change shared code alongside this one, add a gitignored `go.work`:
+
+```
+go 1.25.10
+
+use .
+use ../viam-comms
+```
+
+Tag `viam-comms` first, then confirm the real dependency resolves without the
+workspace before tagging this repo — the release build checks out one repo, so a
+workspace-only resolution passes locally and fails in CI:
+
+```bash
+GOWORK=off go mod tidy && GOWORK=off go build ./...
+```
+
 ```
 viam-server -config etc/dev-single-machine.local.json -debug
 ```

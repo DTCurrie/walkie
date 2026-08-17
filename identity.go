@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/DTCurrie/viam-comms/viamcfg"
 )
 
 // The keys a caller uses to say which channel it wants and who it is. They
@@ -78,15 +80,5 @@ var errNotLocalBus = errors.New(
 		"routing state in process rather than over the network. Check that the \"bus\" " +
 		"attribute names a dtcurrie:walkie:bus on this part, not one on a remote")
 
-// validateResourceRef rejects the two forms that never resolve: "part:name",
-// which Lookup's short-name scan skips, and a fully-qualified name, which
-// NewName splits on ":". Use a prefixed short name.
-func validateResourceRef(path, field, name string) error {
-	if !strings.Contains(name, ":") {
-		return nil
-	}
-	return fmt.Errorf(
-		"%s: %q must not name a remote with a colon; give the remote a \"prefix\" "+
-			"(e.g. \"hub-\") and use the prefixed short name here (e.g. \"hub-uplink\")",
-		path, field)
-}
+// refs quotes walkie-flavoured examples in the colon-rule error.
+var refs = viamcfg.Validator{ExamplePrefix: "hub-", ExampleName: "hub-uplink"}

@@ -49,7 +49,7 @@ func (cfg *UplinkConfig) Validate(path string) ([]string, []string, error) {
 	if cfg.Bus == "" {
 		return nil, nil, resource.NewConfigValidationFieldRequiredError(path, "bus")
 	}
-	if err := validateResourceRef(path, "bus", cfg.Bus); err != nil {
+	if err := refs.ResourceRef(path, "bus", cfg.Bus); err != nil {
 		return nil, nil, err
 	}
 	return []string{cfg.Bus}, nil, nil

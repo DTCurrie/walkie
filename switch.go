@@ -83,7 +83,7 @@ func (cfg *SwitchConfig) Validate(path string) ([]string, []string, error) {
 	if cfg.Radio == "" {
 		return nil, nil, resource.NewConfigValidationFieldRequiredError(path, "radio")
 	}
-	if err := validateResourceRef(path, "radio", cfg.Radio); err != nil {
+	if err := refs.ResourceRef(path, "radio", cfg.Radio); err != nil {
 		return nil, nil, err
 	}
 	if _, err := parseSwitchMode(cfg.Mode); err != nil {

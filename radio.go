@@ -113,7 +113,7 @@ func (cfg *RadioConfig) Validate(path string) ([]string, []string, error) {
 		{"uplink", cfg.Uplink},
 		{"downlink", cfg.Downlink},
 	} {
-		if err := validateResourceRef(path, f.name, f.value); err != nil {
+		if err := refs.ResourceRef(path, f.name, f.value); err != nil {
 			return nil, nil, err
 		}
 	}
