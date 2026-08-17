@@ -16,7 +16,7 @@ import (
 	"go.viam.com/rdk/logging"
 	rutils "go.viam.com/rdk/utils"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 )
 
 // Defaults for Config. Each is explained where it is used.
@@ -56,7 +56,7 @@ type Config struct {
 
 	// DefaultFormat stamps primer and keepalive chunks on channels that do not
 	// declare a format of their own.
-	DefaultFormat audiofmt.Format
+	DefaultFormat pcm.Format
 
 	Logger logging.Logger
 }
@@ -72,8 +72,8 @@ type ChannelConfig struct {
 	NumChannels int
 }
 
-func (cc ChannelConfig) format() (audiofmt.Format, bool) {
-	f := audiofmt.Format{SampleRateHz: cc.SampleRate, NumChannels: cc.NumChannels}
+func (cc ChannelConfig) format() (pcm.Format, bool) {
+	f := pcm.Format{SampleRateHz: cc.SampleRate, NumChannels: cc.NumChannels}
 	return f, cc.SampleRate > 0 && cc.NumChannels > 0
 }
 
@@ -92,7 +92,7 @@ type SubReq struct {
 type TxReq struct {
 	Channel string
 	Member  string
-	Format  audiofmt.Format
+	Format  pcm.Format
 	Info    *rutils.AudioInfo
 }
 
@@ -194,13 +194,13 @@ func (b *Bus) Has(name string) bool {
 }
 
 // DefaultFormat is the format used by channels that declare none of their own.
-func (b *Bus) DefaultFormat() audiofmt.Format { return b.cfg.DefaultFormat }
+func (b *Bus) DefaultFormat() pcm.Format { return b.cfg.DefaultFormat }
 
 // ChannelFormat reports the format a channel carries.
-func (b *Bus) ChannelFormat(name string) (audiofmt.Format, bool) {
+func (b *Bus) ChannelFormat(name string) (pcm.Format, bool) {
 	c, ok := b.chans[name]
 	if !ok {
-		return audiofmt.Format{}, false
+		return pcm.Format{}, false
 	}
 	if declared, ok := c.cfg.format(); ok {
 		return declared, true
@@ -251,7 +251,7 @@ func (b *Bus) Run(ctx context.Context) {
 // plus a function ending the subscription. The channel closes exactly once; the
 // caller must range it to completion.
 func (b *Bus) Subscribe(ctx context.Context, req SubReq) (chan *audioin.AudioChunk, func(), error) {
-	if req.Codec != "" && !audiofmt.SupportedCodec(req.Codec) {
+	if req.Codec != "" && !pcm.SupportedCodec(req.Codec) {
 		// Say so rather than quietly ignoring it: there is no transcoding here,
 		// so a caller asking for opus would otherwise get pcm16 and no warning.
 		return nil, nil, fmt.Errorf("only %q is supported, got %q", rutils.CodecPCM16, req.Codec)
@@ -419,7 +419,7 @@ func (b *Bus) Stats() Stats {
 
 		cs := ChannelStats{
 			Name:           name,
-			Format:         audiofmt.Format{SampleRateHz: int(c.info.SampleRateHz), NumChannels: int(c.info.NumChannels)}.String(),
+			Format:         pcm.Format{SampleRateHz: int(c.info.SampleRateHz), NumChannels: int(c.info.NumChannels)}.String(),
 			Listeners:      len(subs),
 			Members:        make([]string, 0, len(subs)),
 			Holder:         c.currentHolder(),

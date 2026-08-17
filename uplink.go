@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 )
 
@@ -117,7 +117,7 @@ func (u *uplink) PlayStream(ctx context.Context, info *rutils.AudioInfo,
 	if err != nil {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
-	format, err := audiofmt.FromAudioInfo(info)
+	format, err := pcm.FromAudioInfo(info)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument,
 			"a transmission must declare its format in PlayStreamInit: %v", err)

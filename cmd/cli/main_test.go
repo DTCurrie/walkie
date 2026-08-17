@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 )
 
@@ -94,7 +94,7 @@ func TestDescribeTalkErrorIsActionable(t *testing.T) {
 // TestFillToneIsContinuous: the phase has to carry across chunks, or every chunk
 // boundary is a click that looks like a fault.
 func TestFillToneIsContinuous(t *testing.T) {
-	format := audiofmt.Format{SampleRateHz: 16000, NumChannels: 1}
+	format := pcm.Format{SampleRateHz: 16000, NumChannels: 1}
 	data := make([]byte, 320)
 
 	phase := fillTone(data, format, 0)
@@ -102,13 +102,13 @@ func TestFillToneIsContinuous(t *testing.T) {
 
 	// A tone must not be digital silence, or `listen` would report a fault that
 	// is really just this CLI.
-	test.That(t, audiofmt.PeakDBFS(data), test.ShouldBeGreaterThan, audiofmt.SilentDBFS)
+	test.That(t, pcm.PeakDBFS(data), test.ShouldBeGreaterThan, pcm.SilentDBFS)
 }
 
 // TestMeterClamps: levels outside the -60..0 window must not produce a negative
 // repeat count.
 func TestMeterClamps(t *testing.T) {
-	for _, dbfs := range []float64{-1000, audiofmt.SilentDBFS, -60, -30, 0, 12} {
+	for _, dbfs := range []float64{-1000, pcm.SilentDBFS, -60, -30, 0, 12} {
 		test.That(t, meter(dbfs), test.ShouldHaveLength, 32) // 30 cells plus brackets
 	}
 	test.That(t, meter(-1000), test.ShouldEqual, meter(-60))

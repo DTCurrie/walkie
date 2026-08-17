@@ -15,7 +15,7 @@ import (
 	"go.viam.com/rdk/resource"
 	goutils "go.viam.com/utils"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 )
 
@@ -134,7 +134,7 @@ func validateFormatPair(path string, rate, channels int) error {
 	if rate == 0 || channels == 0 {
 		return fmt.Errorf("%s: set both sample_rate and num_channels, or neither", path)
 	}
-	if err := (audiofmt.Format{SampleRateHz: rate, NumChannels: channels}).Valid(); err != nil {
+	if err := (pcm.Format{SampleRateHz: rate, NumChannels: channels}).Valid(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	return nil
@@ -179,9 +179,9 @@ func NewBus(
 	conf *BusConfig,
 	logger logging.Logger,
 ) (resource.Resource, error) {
-	format := audiofmt.Format{SampleRateHz: defaultSampleRate, NumChannels: defaultNumChannels}
+	format := pcm.Format{SampleRateHz: defaultSampleRate, NumChannels: defaultNumChannels}
 	if conf.SampleRate > 0 && conf.NumChannels > 0 {
-		format = audiofmt.Format{SampleRateHz: conf.SampleRate, NumChannels: conf.NumChannels}
+		format = pcm.Format{SampleRateHz: conf.SampleRate, NumChannels: conf.NumChannels}
 	}
 
 	channels := make([]bus.ChannelConfig, 0, len(conf.Channels))

@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 )
 
@@ -389,7 +389,7 @@ func cmdListen(args []string) error {
 		}
 
 		audible++
-		peak := audiofmt.PeakDBFS(chunk.AudioData)
+		peak := pcm.PeakDBFS(chunk.AudioData)
 		if time.Since(lastPrint) > 100*time.Millisecond {
 			lastPrint = time.Now()
 			format := "?"
@@ -438,7 +438,7 @@ func cmdTalk(args []string) error {
 		return err
 	}
 
-	format := audiofmt.Format{SampleRateHz: *rate, NumChannels: *channels}
+	format := pcm.Format{SampleRateHz: *rate, NumChannels: *channels}
 	if err := format.Valid(); err != nil {
 		return err
 	}
@@ -530,7 +530,7 @@ func describeTalkError(err error, channel string) error {
 
 // fillTone writes a 440Hz sine at a comfortable level, returning the phase to
 // carry into the next chunk so consecutive chunks do not click.
-func fillTone(data []byte, f audiofmt.Format, phase float64) float64 {
+func fillTone(data []byte, f pcm.Format, phase float64) float64 {
 	const (
 		freq      = 440.0
 		amplitude = 8000.0

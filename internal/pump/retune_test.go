@@ -12,7 +12,7 @@ import (
 	rutils "go.viam.com/rdk/utils"
 	"go.viam.com/test"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 )
 
 // extraSink records the extra map each PlayStream was opened with, and drains
@@ -326,6 +326,6 @@ func TestHeartbeatsAreInvisibleToEveryOtherCounter(t *testing.T) {
 	test.That(t, got.ChunksIn, test.ShouldEqual, 0)
 	test.That(t, got.Transmissions, test.ShouldEqual, 0)
 	test.That(t, got.SilentSeconds, test.ShouldEqual, 0)
-	test.That(t, got.PeakDBFS, test.ShouldEqual, audiofmt.SilentDBFS)
+	test.That(t, got.PeakDBFS, test.ShouldEqual, pcm.SilentDBFS)
 	test.That(t, got.LastHeartbeatAge, test.ShouldBeGreaterThan, time.Duration(0))
 }

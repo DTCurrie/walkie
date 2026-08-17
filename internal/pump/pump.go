@@ -19,8 +19,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
-	"walkie/internal/queue"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
+	"github.com/DTCurrie/viam-comms/queue"
 )
 
 // Source is the subset of audioin.AudioIn the pump needs, so a resource
@@ -120,7 +120,7 @@ type Config struct {
 	// ExpectFormat, if set, is the format the operator configured both machines
 	// for. A mismatch is counted and warned about but still forwarded with its
 	// true format; dropping would instead make it silent.
-	ExpectFormat *audiofmt.Format
+	ExpectFormat *pcm.Format
 
 	// Extra is passed to every GetAudio and PlayStream call, carrying
 	// {"channel", "member"}. Both audio APIs deliver it per-caller, which is what
@@ -257,7 +257,7 @@ func New(src Source, sink Sink, cfg Config) *Pump {
 	}
 	p.gateMode.Store(int32(cfg.GateMode))
 	p.talking.Store(cfg.StartTalking)
-	p.setPeak(audiofmt.SilentDBFS)
+	p.setPeak(pcm.SilentDBFS)
 	p.SetExtra(cfg.Extra)
 	return p
 }
@@ -433,7 +433,7 @@ func (p *Pump) consume(chunk *audioin.AudioChunk) {
 	now := time.Now()
 	p.lastChunkAt.Store(now.UnixNano())
 
-	format, err := audiofmt.FromAudioInfo(chunk.AudioInfo)
+	format, err := pcm.FromAudioInfo(chunk.AudioInfo)
 	if err != nil {
 		p.formatMismatch.Add(1)
 		p.setErr(err)
@@ -451,7 +451,7 @@ func (p *Pump) consume(chunk *audioin.AudioChunk) {
 		}
 	}
 
-	peak := audiofmt.PeakDBFS(chunk.AudioData)
+	peak := pcm.PeakDBFS(chunk.AudioData)
 	p.setPeak(peak)
 	p.trackSilence(peak, now)
 
@@ -492,7 +492,7 @@ func (p *Pump) evaluateGate(peak float64, now time.Time) bool {
 // Onset and warning clock are separate: one timestamp would saw-tooth
 // silent_seconds and never show a long-dead microphone.
 func (p *Pump) trackSilence(peak float64, now time.Time) {
-	if peak > audiofmt.SilentDBFS {
+	if peak > pcm.SilentDBFS {
 		p.silentSince.Store(0)
 		p.silentWarnAt.Store(0)
 		return

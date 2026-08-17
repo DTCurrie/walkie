@@ -8,8 +8,8 @@ import (
 	"go.viam.com/rdk/components/audioin"
 	rutils "go.viam.com/rdk/utils"
 
-	"walkie/internal/audiofmt"
-	"walkie/internal/queue"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
+	"github.com/DTCurrie/viam-comms/queue"
 )
 
 // channel is one named channel: a set of listeners, and at most one talker.
@@ -95,7 +95,7 @@ func (c *channel) fanout(chunk *audioin.AudioChunk, from string) {
 }
 
 // acquire takes the floor for member, or reports why it could not.
-func (c *channel) acquire(member string, info *rutils.AudioInfo, format audiofmt.Format, now time.Time) (*Tx, error) {
+func (c *channel) acquire(member string, info *rutils.AudioInfo, format pcm.Format, now time.Time) (*Tx, error) {
 	c.floorMu.Lock()
 	defer c.floorMu.Unlock()
 
@@ -201,7 +201,7 @@ type Tx struct {
 	ch     *channel
 	member string
 	info   *rutils.AudioInfo
-	format audiofmt.Format
+	format pcm.Format
 
 	start   time.Time
 	elapsed time.Duration

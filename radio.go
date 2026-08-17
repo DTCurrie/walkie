@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 	"walkie/internal/bus"
 	"walkie/internal/pump"
 )
@@ -247,9 +247,9 @@ func NewRadio(
 			"downlink", conf.Downlink, "error", err)
 	}
 
-	var expect *audiofmt.Format
+	var expect *pcm.Format
 	if conf.SampleRate > 0 && conf.NumChannels > 0 {
-		expect = &audiofmt.Format{SampleRateHz: conf.SampleRate, NumChannels: conf.NumChannels}
+		expect = &pcm.Format{SampleRateHz: conf.SampleRate, NumChannels: conf.NumChannels}
 	}
 
 	extra := r.extraFor(conf.Channel)

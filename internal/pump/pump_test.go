@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	settle       = 2 * time.Second
 )
 
-var testFormat = audiofmt.Format{SampleRateHz: 48000, NumChannels: 1}
+var testFormat = pcm.Format{SampleRateHz: 48000, NumChannels: 1}
 
 // fakeSource mirrors the structure of the real RDK audioin client
 // (components/audioin/client.go) on purpose, including its most dangerous
@@ -124,7 +124,7 @@ func (s *fakeSource) GetAudio(ctx context.Context, codec string, _ float32, _ in
 }
 
 // pcmChunk builds a 20ms chunk whose samples all have the given magnitude.
-func pcmChunk(seq int32, f audiofmt.Format, codec string, level byte) *audioin.AudioChunk {
+func pcmChunk(seq int32, f pcm.Format, codec string, level byte) *audioin.AudioChunk {
 	data := make([]byte, 1920) // 20ms @ 48kHz mono pcm16
 	for i := 1; i < len(data); i += 2 {
 		data[i] = level // high byte, so level 0 is true digital silence
@@ -492,7 +492,7 @@ func TestReconnectsAfterSourceFailure(t *testing.T) {
 // stream.
 func TestFormatChangeOpensNewStream(t *testing.T) {
 	src := newFakeSource()
-	stereo := audiofmt.Format{SampleRateHz: 48000, NumChannels: 2}
+	stereo := pcm.Format{SampleRateHz: 48000, NumChannels: 2}
 	src.chunkFor = func(seq int32) *audioin.AudioChunk {
 		if seq > 5 {
 			return pcmChunk(seq, stereo, rutils.CodecPCM16, 0x20)
@@ -589,7 +589,7 @@ func TestDigitalSilenceIsVisible(t *testing.T) {
 
 	eventually(t, "silence to be observed", func() bool {
 		s := p.Stats()
-		return s.ChunksIn > 3 && s.PeakDBFS == audiofmt.SilentDBFS && s.SilentSeconds > 0
+		return s.ChunksIn > 3 && s.PeakDBFS == pcm.SilentDBFS && s.SilentSeconds > 0
 	})
 }
 
@@ -603,11 +603,11 @@ func TestSilentSecondsMeasuresTheWholeSilence(t *testing.T) {
 	p := New(newFakeSource(), &memSink{}, testConfig(t))
 
 	start := time.Unix(1_700_000_000, 0)
-	p.trackSilence(audiofmt.SilentDBFS, start)
+	p.trackSilence(pcm.SilentDBFS, start)
 
 	// Well past several warning intervals.
 	for elapsed := time.Second; elapsed <= time.Minute; elapsed += time.Second {
-		p.trackSilence(audiofmt.SilentDBFS, start.Add(elapsed))
+		p.trackSilence(pcm.SilentDBFS, start.Add(elapsed))
 	}
 
 	onset := time.Unix(0, p.silentSince.Load())
@@ -628,7 +628,7 @@ func TestStatsSnapshot(t *testing.T) {
 	s := p.Stats()
 	test.That(t, s.Connected, test.ShouldBeFalse)
 	test.That(t, s.GateMode, test.ShouldEqual, "manual")
-	test.That(t, s.PeakDBFS, test.ShouldEqual, audiofmt.SilentDBFS)
+	test.That(t, s.PeakDBFS, test.ShouldEqual, pcm.SilentDBFS)
 	test.That(t, s.LastChunkAge, test.ShouldEqual, 0)
 
 	p.SetGateMode(GateOpen)

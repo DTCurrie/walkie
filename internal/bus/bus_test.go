@@ -16,10 +16,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"walkie/internal/audiofmt"
+	"github.com/DTCurrie/viam-comms/audio/pcm"
 )
 
-var testFormat = audiofmt.Format{SampleRateHz: 48000, NumChannels: 1}
+var testFormat = pcm.Format{SampleRateHz: 48000, NumChannels: 1}
 
 // testHangover is the shortest hangover the bus will accept. Tests that wait it
 // out pay for it in wall clock, which is preferable to letting the bound be
@@ -80,7 +80,7 @@ func eventually(t *testing.T, what string, cond func() bool) {
 	t.Fatalf("timed out waiting for %s", what)
 }
 
-func pcm(n int) []byte { return make([]byte, n*2) }
+func silence(n int) []byte { return make([]byte, n*2) }
 
 func publish(t *testing.T, b *Bus, channel, member string) *Tx {
 	t.Helper()
@@ -170,7 +170,7 @@ func TestFanOutReachesEverySubscriber(t *testing.T) {
 	tx := publish(t, b, "ops", "bravo")
 	defer tx.Close()
 	for range 5 {
-		test.That(t, tx.Send(pcm(32)), test.ShouldBeNil)
+		test.That(t, tx.Send(silence(32)), test.ShouldBeNil)
 	}
 
 	eventually(t, "alpha to hear all five", func() bool { return len(a.audible()) == 5 })
@@ -190,7 +190,7 @@ func TestSelfEchoSuppressed(t *testing.T) {
 	tx := publish(t, b, "ops", "alpha")
 	defer tx.Close()
 	for range 4 {
-		_ = tx.Send(pcm(32))
+		_ = tx.Send(silence(32))
 	}
 
 	eventually(t, "bravo to hear alpha", func() bool { return len(bravo.audible()) == 4 })
@@ -214,7 +214,7 @@ func TestSlowSubscriberDoesNotBlockTalker(t *testing.T) {
 
 	start := time.Now()
 	for range 10_000 {
-		test.That(t, tx.Send(pcm(16)), test.ShouldBeNil)
+		test.That(t, tx.Send(silence(16)), test.ShouldBeNil)
 	}
 	test.That(t, time.Since(start), test.ShouldBeLessThan, 5*time.Second)
 
@@ -234,7 +234,7 @@ func TestDeadSubscriberDropsOldest(t *testing.T) {
 	tx := publish(t, b, "ops", "talker")
 	defer tx.Close()
 	for range 100 {
-		_ = tx.Send(pcm(8))
+		_ = tx.Send(silence(8))
 	}
 
 	eventually(t, "drops to be counted", func() bool {
@@ -289,7 +289,7 @@ func TestSubscribeDuringFanoutIsSafe(t *testing.T) {
 	}
 
 	for range 10_000 {
-		_ = tx.Send(pcm(8))
+		_ = tx.Send(silence(8))
 	}
 	close(stop)
 	wg.Wait()
@@ -312,7 +312,7 @@ func TestWriterExitsWhenServerStopsReading(t *testing.T) {
 	// behind it, so the writer is parked inside emit.
 	tx := publish(t, b, "ops", "talker")
 	for range 50 {
-		_ = tx.Send(pcm(8))
+		_ = tx.Send(silence(8))
 	}
 	tx.Close()
 
@@ -382,7 +382,7 @@ func TestNeverEmitsNilChunkOrNilAudioInfo(t *testing.T) {
 
 	tx := publish(t, b, "ops", "bravo")
 	for range 3 {
-		_ = tx.Send(pcm(16))
+		_ = tx.Send(silence(16))
 	}
 	tx.Close()
 
@@ -441,7 +441,7 @@ func TestFirstTalkerWins(t *testing.T) {
 	test.That(t, IsBusy(err), test.ShouldBeTrue)
 
 	// The first talker is entirely unaffected.
-	test.That(t, first.Send(pcm(8)), test.ShouldBeNil)
+	test.That(t, first.Send(silence(8)), test.ShouldBeNil)
 }
 
 func TestConcurrentAcquireHasExactlyOneWinner(t *testing.T) {
@@ -520,7 +520,7 @@ func TestSameMemberReacquireSupersedes(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("the superseded transmission was never revoked")
 	}
-	test.That(t, second.Send(pcm(8)), test.ShouldBeNil)
+	test.That(t, second.Send(silence(8)), test.ShouldBeNil)
 	second.Close()
 }
 
@@ -532,7 +532,7 @@ func TestRevokedTxCannotSend(t *testing.T) {
 	_, err := b.ClearFloor("ops")
 	test.That(t, err, test.ShouldBeNil)
 
-	test.That(t, tx.Send(pcm(8)), test.ShouldWrap, ErrRevoked)
+	test.That(t, tx.Send(silence(8)), test.ShouldWrap, ErrRevoked)
 	// A settle window, not a poll: the assertion is that nothing arrives.
 	time.Sleep(50 * time.Millisecond)
 	test.That(t, l.audible(), test.ShouldBeEmpty)
@@ -618,7 +618,7 @@ func TestChannelFormatMismatchRejected(t *testing.T) {
 
 	_, err := b.Publish(context.Background(), TxReq{
 		Channel: "ops", Member: "alpha",
-		Format: audiofmt.Format{SampleRateHz: 48000, NumChannels: 1},
+		Format: pcm.Format{SampleRateHz: 48000, NumChannels: 1},
 	})
 	test.That(t, err, test.ShouldNotBeNil)
 	test.That(t, strings.Contains(err.Error(), "16000"), test.ShouldBeTrue)
@@ -626,7 +626,7 @@ func TestChannelFormatMismatchRejected(t *testing.T) {
 	// A talker in the declared format is accepted.
 	tx, err := b.Publish(context.Background(), TxReq{
 		Channel: "ops", Member: "alpha",
-		Format: audiofmt.Format{SampleRateHz: 16000, NumChannels: 1},
+		Format: pcm.Format{SampleRateHz: 16000, NumChannels: 1},
 	})
 	test.That(t, err, test.ShouldBeNil)
 	tx.Close()
