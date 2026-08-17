@@ -1,0 +1,37 @@
+{
+  "components": [
+    {
+      "name": "bus",
+      "api": "rdk:component:generic",
+      "model": "dtcurrie:walkie:bus",
+      "attributes": {
+        "channels": [
+          { "name": "ops" },
+          { "name": "logistics" }
+        ],
+        "sample_rate": 16000,
+        "num_channels": 1
+      }
+    },
+    {
+      "name": "uplink",
+      "api": "rdk:component:audio_out",
+      "model": "dtcurrie:walkie:uplink",
+      "attributes": { "bus": "bus" }
+    },
+    {
+      "name": "downlink",
+      "api": "rdk:component:audio_in",
+      "model": "dtcurrie:walkie:downlink",
+      "attributes": { "bus": "bus" }
+    }
+  ],
+  "modules": [
+    {
+      "type": "registry",
+      "name": "dtcurrie_walkie",
+      "module_id": "dtcurrie:walkie",
+      "version": "latest"
+    }
+  ]
+}

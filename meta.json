@@ -1,0 +1,56 @@
+{
+  "$schema": "https://dl.viam.dev/module.schema.json",
+  "module_id": "dtcurrie:walkie",
+  "visibility": "public",
+  "url": "https://github.com/DTCurrie/viam-walkie",
+  "description": "A channel-based audio network: any number of machines join named channels, and a member's microphone reaches every speaker tuned to the same channel, with push-to-talk floor control and runtime channel changes",
+  "models": [
+    {
+      "api": "rdk:component:generic",
+      "model": "dtcurrie:walkie:bus",
+      "short_description": "Declares the channels a hub carries, and routes audio between the members tuned to each one",
+      "markdown_link": "dtcurrie_walkie_bus.md"
+    },
+    {
+      "api": "rdk:component:audio_out",
+      "model": "dtcurrie:walkie:uplink",
+      "short_description": "The hub endpoint members talk into; takes the channel floor and fans audio out to its listeners",
+      "markdown_link": "dtcurrie_walkie_uplink.md"
+    },
+    {
+      "api": "rdk:component:audio_in",
+      "model": "dtcurrie:walkie:downlink",
+      "short_description": "The hub endpoint members listen to; streams whatever is being said on the caller's channel",
+      "markdown_link": "dtcurrie_walkie_downlink.md"
+    },
+    {
+      "api": "rdk:component:generic",
+      "model": "dtcurrie:walkie:radio",
+      "short_description": "A member's microphone and speaker joined to a channel, retunable at runtime without a config change",
+      "markdown_link": "dtcurrie_walkie_radio.md"
+    },
+    {
+      "api": "rdk:component:switch",
+      "model": "dtcurrie:walkie:switch",
+      "short_description": "A switch that drives a radio, either as push-to-talk or as a channel selector",
+      "markdown_link": "dtcurrie_walkie_switch.md"
+    }
+  ],
+  "applications": null,
+  "markdown_link": "README.md",
+  "entrypoint": "bin/walkie",
+  "first_run": "",
+  "build": {
+    "build": "make module.tar.gz",
+    "setup": "make setup",
+    "path": "module.tar.gz",
+    "arch": [
+      "linux/amd64",
+      "linux/arm64",
+      "darwin/arm64"
+    ],
+    "darwin_deps": [
+      "go"
+    ]
+  }
+}

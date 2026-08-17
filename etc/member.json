@@ -1,0 +1,82 @@
+{
+  "remotes": [
+    {
+      "name": "hub",
+      "address": "REPLACE-WITH-HUB-ADDRESS.viam.cloud",
+      "prefix": "hub-",
+      "connection_check_interval": "5s",
+      "reconnect_interval": "2s",
+      "auth": {
+        "entity": "REPLACE-WITH-HUB-ADDRESS.viam.cloud",
+        "credentials": {
+          "type": "api-key",
+          "payload": "REPLACE-WITH-API-KEY"
+        }
+      }
+    }
+  ],
+  "components": [
+    {
+      "name": "mic",
+      "api": "rdk:component:audio_in",
+      "model": "viam:system-audio:microphone",
+      "attributes": { "sample_rate": 16000, "num_channels": 1 }
+    },
+    {
+      "name": "speaker",
+      "api": "rdk:component:audio_out",
+      "model": "viam:system-audio:speaker",
+      "attributes": {}
+    },
+    {
+      "name": "radio",
+      "api": "rdk:component:generic",
+      "model": "dtcurrie:walkie:radio",
+      "attributes": {
+        "source": "mic",
+        "sink": "speaker",
+        "uplink": "hub-uplink",
+        "downlink": "hub-downlink",
+        "member": "alpha",
+        "channel": "ops",
+        "gate_mode": "manual",
+        "sample_rate": 16000,
+        "num_channels": 1
+      }
+    },
+    {
+      "name": "ptt",
+      "api": "rdk:component:switch",
+      "model": "dtcurrie:walkie:switch",
+      "attributes": {
+        "radio": "radio",
+        "mode": "ptt",
+        "positions": ["idle", "talk"]
+      }
+    },
+    {
+      "name": "channel",
+      "api": "rdk:component:switch",
+      "model": "dtcurrie:walkie:switch",
+      "attributes": {
+        "radio": "radio",
+        "mode": "channel",
+        "positions": ["ops", "logistics"]
+      }
+    }
+  ],
+  "modules": [
+    {
+      "type": "registry",
+      "name": "dtcurrie_walkie",
+      "module_id": "dtcurrie:walkie",
+      "version": "latest"
+    },
+    {
+      "type": "registry",
+      "name": "viam_system-audio",
+      "module_id": "viam:system-audio",
+      "version": "0.0.7-rc3"
+    }
+  ]
+}
